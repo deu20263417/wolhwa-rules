@@ -2,6 +2,13 @@
 
 이 홈페이지는 빌드가 필요 없는 정적 사이트입니다. 규칙 페이지는 어떤 무료 정적 호스팅에서도 24시간 열립니다. 서버 상태 표시만 외부 조회에 의존하며, 조회가 실패해도 규칙 페이지는 정상 동작합니다.
 
+## 현재 배포 상태
+
+| 서비스 | 주소 | 배포 방식 |
+|---|---|---|
+| Cloudflare Pages (대표) | https://wolhwa.pages.dev | main에 push 하면 Cloudflare가 자동 빌드(`node scripts/validate.mjs`) 후 배포 |
+| GitHub Pages (보조) | https://deu20263417.github.io/wolhwa-rules/ | main에 push 하면 GitHub Actions가 검증 후 배포 |
+
 ## 1. 자동 배포 구조
 
 ```

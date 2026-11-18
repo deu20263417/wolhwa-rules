@@ -1,6 +1,6 @@
 # 월화(月花) 규칙 포털
 
-**홈페이지: https://deu20263417.github.io/wolhwa-rules/**
+**홈페이지: https://wolhwa.pages.dev/**  (보조 주소: https://deu20263417.github.io/wolhwa-rules/)
 
 다크 판타지 게임 포털과 문서 사이트를 합친 규칙 홈페이지입니다. 빌드 없이 정적 파일만으로 동작합니다.
 
