@@ -1,0 +1,13 @@
+# Cloudflare Pages · Netlify 용 응답 헤더 (GitHub Pages는 이 파일을 무시한다)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.mcsrvstat.us https://*.workers.dev; frame-ancestors 'none'; base-uri 'self'
+
+/img/*
+  Cache-Control: public, max-age=2592000, immutable
+/vendor/*
+  Cache-Control: public, max-age=2592000, immutable
+/data/*
+  Cache-Control: public, max-age=60, must-revalidate
