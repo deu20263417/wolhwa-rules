@@ -122,5 +122,6 @@
     "refreshSec": 60,
     "maintenance": false,
     "maintenanceNote": ""
-  }
+  },
+  "siteUrl": "https://deu20263417.github.io/wolhwa-rules/"
 }
