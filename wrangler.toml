@@ -1,0 +1,5 @@
+# Cloudflare Pages 프로젝트 설정 (대시보드 설정보다 우선)
+# 빌드 명령(대시보드): node scripts/build.mjs 또는 node scripts/validate.mjs — 어느 쪽이든 _site 를 만든다.
+name = "wolhwa"
+pages_build_output_dir = "_site"
+compatibility_date = "2024-09-01"

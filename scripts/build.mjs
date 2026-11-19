@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 
 // 1. 검증 (실패하면 여기서 멈춘다)
-execFileSync(process.execPath, ["scripts/validate.mjs"], { cwd: root, stdio: "inherit" });
+execFileSync(process.execPath, ["scripts/validate.mjs"], { cwd: root, stdio: "inherit", env: { ...process.env, WH_BUILDING: "1" } });
 
 // 2. 문서별 최종 수정일 (git 기록이 없으면 기존 값 유지)
 const metaPath = join(root, "data/meta.json");

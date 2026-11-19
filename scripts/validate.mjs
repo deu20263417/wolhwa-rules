@@ -1,6 +1,7 @@
 // 규칙 데이터 검증: 배포 전에 형식 오류와 깨진 조항 참조를 잡는다.
 // 사용: node scripts/validate.mjs   (오류가 있으면 종료 코드 1)
 import { readFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const read = f => readFileSync(new URL("../data/" + f, import.meta.url), "utf8");
 const errors = [], warns = [];
@@ -93,3 +94,8 @@ console.log(`장 ${chCount} · 조 ${keys.size} · 제재 ${codes.size} · 사�
 warns.forEach(w => console.log("주의: " + w));
 if (errors.length) { errors.forEach(e => console.error("오류: " + e)); process.exit(1); }
 console.log("검증 통과");
+
+// Cloudflare Pages 빌드에서는(대시보드 빌드 명령이 이 파일일 때) 이어서 _site 빌드까지 한다.
+if (process.env.CF_PAGES && !process.env.WH_BUILDING) {
+  execFileSync(process.execPath, ["scripts/build.mjs"], { cwd: new URL("..", import.meta.url), stdio: "inherit", env: { ...process.env, WH_BUILDING: "1" } });
+}
