@@ -43,12 +43,12 @@
     if (!S.checked) { root.innerHTML = `<div class="lock"><p class="muted">권한을 확인하고 있어요…</p></div>`; return; }
     if (!S.canEdit) {
       root.innerHTML = `<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <h1 class="serif" style="font-size:28px">운영진 전용 화면입니다</h1>
-        <p class="muted" style="margin-top:10px">규칙 편집은 이 페이지의 소유자와 편집 권한을 받은 운영진만 할 수 있어요. 규칙에 문제가 있으면 디스코드 신고 티켓으로 알려 주세요.</p>
-        <p style="margin-top:20px"><a class="btn-sm" href="#rules" style="display:inline-flex;align-items:center;text-decoration:none">전체 규칙 보기</a></p></div>`;
+        <h1>운영진 전용 화면입니다</h1>
+        <p class="muted">규칙 편집은 이 페이지의 소유자와 편집 권한을 받은 운영진만 할 수 있어요. 규칙에 문제가 있으면 디스코드 신고 티켓으로 알려 주세요.</p>
+        <p><a class="btn-sm" href="#rules">서버 규칙 보기</a></p></div>`;
       return;
     }
-    if (!S.db) { root.innerHTML = `<div class="lock"><h1 class="serif" style="font-size:28px">저장소에 연결할 수 없어요</h1><p class="muted" style="margin-top:10px">로그인 상태를 확인하고 새로고침해 주세요. 그동안 규칙은 원본 파일로 표시됩니다.</p></div>`; return; }
+    if (!S.db) { root.innerHTML = `<div class="lock"><h1>저장소에 연결할 수 없어요</h1><p class="muted">로그인 상태를 확인하고 새로고침해 주세요. 그동안 규칙은 원본 파일로 표시됩니다.</p></div>`; return; }
 
     const key = S.sel, info = WH.model.overrideInfo(key);
     const cur = S.drafts[key] ?? WH.model.md(key);
@@ -57,17 +57,17 @@
         <p class="desc">이 화면은 소유자와 편집 권한자에게만 보입니다. 저장하면 모든 방문자에게 바로 적용되고, 원본 파일(data/${key}.md)은 그대로 남아 언제든 되돌릴 수 있어요. 큰 변경은 CHANGELOG에도 기록하세요 (제65조).</p></div>
       <div class="admin-bar">
         <label class="field">문서<select id="adDoc">${WH.DOC_KEYS.map(k => `<option value="${k}" ${k === key ? "selected" : ""}>${LABEL[k]} (${k}.md)${WH.model.overridden(k) ? " · 수정본" : ""}</option>`).join("")}</select></label>
-        <label class="field" style="flex:1;min-width:220px">변경 사유 (필수)<input id="adNote" type="text" maxlength="120" placeholder="예: 제17조 TNT 상한 64 → 48 조정"></label>
+        <label class="field grow">변경 사유 (필수)<input id="adNote" type="text" maxlength="120" placeholder="예: 제17조 TNT 상한 64 → 48 조정"></label>
         <button class="btn-sm primary" id="adSave" type="button">저장하고 적용</button>
         <button class="btn-sm danger" id="adRevert" type="button" ${info ? "" : "disabled"}>원본으로 되돌리기</button>
       </div>
-      <p class="status" id="adStatus" style="margin-top:10px">${info ? `수정본 적용 중 · ${WH.esc((info.updatedAt || "").replace("T", " ").slice(0, 16))}${info.note ? " · " + WH.esc(info.note) : ""}` : "원본 파일 표시 중"}</p>
+      <p class="status" id="adStatus">${info ? `수정본 적용 중 · ${WH.esc((info.updatedAt || "").replace("T", " ").slice(0, 16))}${info.note ? " · " + WH.esc(info.note) : ""}` : "원본 파일 표시 중"}</p>
       <div class="admin-grid">
         <label class="sr" for="adText">마크다운</label>
         <textarea id="adText" spellcheck="false">${WH.esc(cur)}</textarea>
         <div class="admin-preview prose" id="adPreview" aria-label="미리보기"></div>
       </div>
-      <h2 class="serif" style="font-size:20px;margin-top:40px">최근 편집 기록</h2>
+      <h2 class="admin-h2">최근 편집 기록</h2>
       <ul class="history" id="adHistory"><li class="muted">불러오는 중…</li></ul>`;
 
     const ta = $("#adText"), pv = $("#adPreview"), st = $("#adStatus");

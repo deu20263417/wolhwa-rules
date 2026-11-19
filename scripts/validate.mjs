@@ -68,6 +68,23 @@ if (!qs.length) err("FAQ: 질문(**Q. ...**)이 없음");
 // NOTICE
 for (const m of read("NOTICE.md").matchAll(/^## (.+)$/gm)) if (!/^\d{4}-\d{2}-\d{2} · .+/.test(m[1])) err(`NOTICE: 제목 형식 오류 '${m[1]}' (YYYY-MM-DD · 제목)`);
 
+// wiki.json: 카테고리 주소가 실제로 있는지
+try {
+  const wiki = JSON.parse(read("wiki.json")); const ids = new Set(); const pages = new Set(["#rules", "#war", "#penalty", "#cases", "#faq", "#changelog", "#notice", "#report"]);
+  const chs = chCount;
+  for (const c of wiki.categories || []) {
+    if (!c.id || !/^[a-z]+$/.test(c.id)) err(`wiki.json: 카테고리 id 형식 오류 '${c.id}' (영문 소문자)`);
+    if (ids.has(c.id)) err(`wiki.json: 카테고리 id 중복 '${c.id}'`); ids.add(c.id);
+    if (!Array.isArray(c.docs)) { if (!["chapters", "faq"].includes(c.docs)) err(`wiki.json: ${c.id} docs 형식 오류`); continue; }
+    if (!c.docs.length) warn(`wiki.json: '${c.name}' 카테고리는 문서가 없어 '준비 중'으로 표시됨`);
+    for (const d of c.docs) {
+      const h = d.href || ""; let m;
+      const ok = pages.has(h) || ((m = h.match(/^#ch-(\d+)$/)) && +m[1] >= 1 && +m[1] <= chs) || ((m = h.match(/^#rule-(\d+(?:-\d+)?)$/)) && keys.has(m[1])) || /^#faq-g\d+$/.test(h) || /^#(war|penalty|report|changelog|notice)-s?\d+$/.test(h) || /^#case-\d+$/.test(h) || /^#cat-[a-z]+$/.test(h);
+      if (!ok) err(`wiki.json: '${c.name}'의 '${d.title}' 주소 오류 '${h}'`);
+    }
+  }
+} catch (e) { err("wiki.json: JSON 형식 오류 " + e.message); }
+
 // 관리자 확인 필요 조항 안내
 const drafts = [...rules.matchAll(/^### (제\d+조(?:의\d+)?) \((.+?)\).*관리자 확인 필요/gm)].map(m => m[1]);
 if (drafts.length) warn(`관리자 확인이 필요한 조항 ${drafts.length}개: ${drafts.join(", ")}`);

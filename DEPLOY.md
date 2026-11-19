@@ -6,8 +6,8 @@
 
 | 서비스 | 주소 | 배포 방식 |
 |---|---|---|
-| Cloudflare Pages (대표) | https://wolhwa.pages.dev | main에 push 하면 Cloudflare가 자동 빌드(`node scripts/validate.mjs`) 후 배포 |
-| GitHub Pages (보조) | https://deu20263417.github.io/wolhwa-rules/ | main에 push 하면 GitHub Actions가 검증 후 배포 |
+| Cloudflare Pages (대표) | https://wolhwa.pages.dev | main에 push 하면 Cloudflare가 `node scripts/build.mjs`로 검증·빌드 후 `_site`를 배포 |
+| GitHub Pages (보조) | https://deu20263417.github.io/wolhwa-rules/ | main에 push 하면 GitHub Actions가 같은 빌드 스크립트로 배포 |
 
 ## 1. 자동 배포 구조
 
@@ -24,9 +24,9 @@ data/*.md 수정 → GitHub에 push → Actions가 규칙 데이터 검증 → �
 
 | 순위 | 서비스 | 설정 | 비고 |
 |---|---|---|---|
-| 1 | Cloudflare Pages | GitHub 저장소 연결 → Framework: None → Build command: `node scripts/validate.mjs` → Output directory: `/` | `_headers`의 보안·캐시 헤더가 적용됩니다. 주소: `프로젝트명.pages.dev` |
+| 1 | Cloudflare Pages | GitHub 저장소 연결 → Framework: None → Build command: `node scripts/build.mjs` → Output directory: `_site` | `_headers`의 보안·캐시 헤더가 적용됩니다. 주소: `프로젝트명.pages.dev` |
 | 2 | GitHub Pages | 저장소 Settings → Pages → Source: **GitHub Actions** | `.github/workflows/deploy.yml`이 검증 후 배포합니다. 주소: `계정명.github.io/저장소명` |
-| 3 | Netlify | 저장소 연결 → Build command: `node scripts/validate.mjs` → Publish directory: `.` | `_headers` 적용 |
+| 3 | Netlify | 저장소 연결 → Build command: `node scripts/build.mjs` → Publish directory: `_site` | `_headers` 적용 |
 
 세 서비스 모두 무료 플랜에서 HTTPS가 자동 적용됩니다. 과금이 생기는 설정(유료 도메인, 유료 플랜, 사용량 초과 과금)은 켜지 마세요.
 
@@ -34,6 +34,14 @@ data/*.md 수정 → GitHub에 push → Actions가 규칙 데이터 검증 → �
 - **24시간 접속 가능 ≠ 24시간 무중단 보장**입니다. 무료 플랜에는 가용성 보장(SLA)이 없습니다.
 - 정적 사이트는 잠들지 않지만, 월간 빌드 횟수·대역폭 한도가 있습니다. 규칙 사이트 규모에서는 넘기 어렵습니다.
 - 서비스 약관이나 무료 범위는 바뀔 수 있으니 1년에 한 번 확인하세요.
+
+## 보안 설정
+
+- **CSP**: 스크립트·스타일·글꼴은 이 사이트 파일만, 외부 연결은 서버 상태 조회(mcsrvstat.us, workers.dev)만 허용한다. `index.html`의 메타 태그(모든 호스팅)와 `_headers`(Cloudflare)에 같은 정책이 있다.
+- **HSTS, X-Frame-Options, COOP, Permissions-Policy**: `_headers`로 적용 (Cloudflare).
+- **외부 글꼴 없음**: Pretendard를 사이트에 직접 포함해 Google Fonts 요청을 없앴다.
+- **마크다운 정화**: 문서에 들어간 HTML에서 스크립트, iframe, 이벤트 속성, `javascript:` 주소를 지운다.
+- **공개 범위**: 빌드는 `_site`에 화면에 필요한 파일만 담는다. `backend/`, `scripts/`, 문서 원본 설명서는 배포되지 않는다.
 
 ## 3. 서버 상태 연동
 

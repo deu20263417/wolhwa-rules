@@ -1,4 +1,4 @@
-# 월화(月花) 규칙 포털
+# 월화(月花) 공식 위키
 
 **홈페이지: https://wolhwa.pages.dev/**  (보조 주소: https://deu20263417.github.io/wolhwa-rules/)
 
@@ -24,12 +24,15 @@ js/status.js      서버 상태 표시 (공개 조회 또는 백엔드)
 js/admin.js       운영진 편집 (Claude 아티팩트 사본에서만, 권한자 전용)
 data/*.md         규칙 원문 6종 + 공지(NOTICE.md) + 신고 안내(REPORT.md)
 data/site.json    서버 정보, 서버 상태 설정, 홈 화면 수치, 전쟁 진행 단계
+data/wiki.json    위키 카테고리와 문서 목록 (홈·사이드바·메뉴가 이 파일을 읽음)
+data/meta.json    문서별 최종 수정일 (빌드 때 git 기록으로 자동 갱신)
+fonts/pretendard/ 본문 글꼴 Pretendard (OFL, 사이트에 직접 포함)
 vendor/           marked (마크다운 변환, MIT)
 img/              키 비주얼(WebP 3종 + JPG), 파비콘
 backend/          서버 상태 Worker (선택)
-scripts/          규칙 데이터 검증
+scripts/          validate.mjs(규칙 데이터 검증), build.mjs(검증 + 수정일 + _site 빌드)
 .github/workflows GitHub Pages 자동 배포
-_headers          Cloudflare Pages · Netlify 보안·캐시 헤더
+_headers          Cloudflare Pages 보안 헤더(CSP, HSTS 등)·캐시
 DEPLOY.md         배포와 서버 연동 안내
 ```
 

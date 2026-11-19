@@ -125,6 +125,8 @@
       md: k => src(k),
       overridden: k => !!(override[k] && override[k].md),
       overrideInfo: k => override[k] || null,
+      wiki: WH.wiki,
+      updated: k => (override[k] && override[k].updatedAt && override[k].updatedAt.slice(0, 10)) || (WH.meta.files && WH.meta.files[k + ".md"]) || WH.site.revisedAt,
       latestEdit: () => Object.values(override).map(o => o.updatedAt).filter(Boolean).sort().pop() || null,
     };
     return WH.model;
@@ -136,8 +138,9 @@
       if (!r.ok) throw new Error(p + " " + r.status);
       return json ? r.json() : r.text();
     };
-    const [site, ...docs] = await Promise.all([get("data/site.json", true), ...DOC_KEYS.map(k => get("data/" + k + ".md"))]);
-    WH.site = site;
+    const opt = p => get(p, true).catch(() => null);
+    const [site, wiki, meta, ...docs] = await Promise.all([get("data/site.json", true), opt("data/wiki.json"), opt("data/meta.json"), ...DOC_KEYS.map(k => get("data/" + k + ".md"))]);
+    WH.site = site; WH.wiki = wiki || { categories: [] }; WH.meta = meta || { files: {} };
     DOC_KEYS.forEach((k, i) => { raw[k] = docs[i]; });
     return build();
   }
