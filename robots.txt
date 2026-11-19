@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://wolhwa.pages.dev/sitemap.xml

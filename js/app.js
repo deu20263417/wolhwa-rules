@@ -28,6 +28,8 @@
     help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/>'),
     info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   };
+  /* 카테고리 아이콘: js/icons.js(Lucide)에 있으면 그것을, 없으면 위 ICON을 쓴다 */
+  const iconOf = name => (window.ICONS && window.ICONS[name]) ? window.icon(name) : (ICON[name] || ICON.info);
   const DOC_ROUTE = { RULES: "rules", WAR_RULES: "war", PENALTY: "penalty", CASES: "cases", FAQ: "faq", CHANGELOG: "changelog", NOTICE: "notice", REPORT: "report" };
   const PAGE_META = {
     rules: ["서버 규칙", "RULES"], war: ["전쟁·약탈 세부 절차", "WAR_RULES"], penalty: ["제재 기준표", "PENALTY"],
@@ -35,7 +37,9 @@
     notice: ["공지", "NOTICE"], report: ["신고·문의 안내", "REPORT"], admin: ["규칙 편집", null],
   };
   /* 페이지 → 상단 메뉴 */
-  const NAV_OF = { rules: "rules", war: "war", penalty: "penalty", cases: "penalty", faq: "faq", report: "guide", notice: "guide", changelog: "guide", admin: "admin" };
+  const NAV_OF = { rules: "rules", war: "war", penalty: "penalty", cases: "cases", faq: "help", report: "help", notice: "help", changelog: "help", admin: "admin" };
+  /* 예전 카테고리 주소 → 새 카테고리 (옛 링크가 깨지지 않도록) */
+  const CAT_ALIAS = { guide: "help", world: "raid", faq: "help" };
   let M, cleanup = [], state = { page: null, chapter: null, cat: null };
 
   /* ───────── 공통 ───────── */
@@ -146,7 +150,8 @@
     if (!h || h === "home") return { page: "home" };
     if (h === "view") return null;
     if (h === "rules") return { page: "rules", chapter: 1 };
-    if ((m = h.match(/^cat-([a-z]+)$/))) return catById(m[1]) ? { page: "cat", cat: m[1] } : { page: "home" };
+    if ((m = h.match(/^cat-([a-z]+)$/))) { const id = CAT_ALIAS[m[1]] || m[1]; return catById(id) ? { page: "cat", cat: id } : { page: "home" }; }
+    if (h === "search") return { page: "home", search: true };
     if ((m = h.match(/^ch-(\d+)$/))) return { page: "rules", chapter: +m[1] };
     if ((m = h.match(/^rule-(\d+(?:-\d+)?)$/))) { const a = M.artByKey(m[1]); return a ? { page: "rules", chapter: a.chapter, target: h } : { page: "rules", chapter: 1 }; }
     if (/^pen-/.test(h)) return { page: "penalty", target: h };
@@ -161,6 +166,7 @@
     const r = route(location.hash);
     if (!r) return; // 본문 바로가기
     closeDrawer();
+    if (r.search) { history.replaceState(null, "", "#home"); setTimeout(() => openSearch(), 0); }
     const same = r.page === state.page && (r.page !== "rules" || r.chapter === state.chapter) && (r.page !== "cat" || r.cat === state.cat) && view.childElementCount;
     if (!same) render(r);
     if (r.target) jump(r.target, true);
@@ -179,8 +185,8 @@
     });
   }
   function navKey(r) {
-    if (r.page === "cat") return r.cat === "rules" ? "rules" : r.cat === "penalty" ? "penalty" : r.cat === "faq" ? "faq" : r.cat;
-    if (r.page === "rules") return [3, 4].includes(r.chapter) ? "war" : r.chapter === 5 ? "clan" : "rules";
+    if (r.page === "cat") return r.cat === "economy" || r.cat === "commands" ? "penalty" : r.cat;
+    if (r.page === "rules") return r.chapter === 3 ? "raid" : r.chapter === 4 ? "war" : r.chapter === 5 ? "clan" : "rules";
     return NAV_OF[r.page] || "";
   }
   function markNav(r) {
@@ -206,95 +212,147 @@
   const chapterOf = n => M.rules.chapters.find(c => c.no === n);
 
   /* ───────── 홈 ───────── */
+  /* 홈 4컷 안내. 그림 위치는 css의 .sc-1 ~ .sc-4 */
+  const SCENES = [
+    { href: "#cat-start", hanja: "始", alt: "여행자를 반기는 월화", say: "♥ 어서 와요!", title: "서버 접속", desc: "첫 접속 후 7일은 신규 유저 보호 (제14조)" },
+    { href: "#rule-12", hanja: "守", alt: "거점 등록을 권하는 월화", say: "꼭 등록해요!", title: "거점 등록", desc: "두 꼭짓점 좌표와 스크린샷으로 내 집 지키기" },
+    { href: "#cat-clan", hanja: "盟", alt: "클랜과 중립 사이에서 고민하는 월화", say: "어디로 갈까?", title: "클랜 또는 중립", desc: "3~20명 클랜에 들거나, 중립으로 지내요" },
+    { href: "#war", hanja: "戰", alt: "전쟁터로 향하는 월화", say: "법도 있게!", title: "공식 전쟁", desc: "19~23시 정각 시작, 법도 있는 2시간" },
+  ];
+  /* 지금의 월화: 한국 시간 기준. 제24조 — 전쟁 시작 시각은 19:00~23:00 정각 */
+  function liveState() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + now.getTimezoneOffset() * 60000 + 9 * 3600000);
+    const h = kst.getHours();
+    const war = h >= 19 && h < 23;
+    return {
+      war, time: `${pad(kst.getHours())}:${pad(kst.getMinutes())}`,
+      items: war ? ["전쟁 시작 가능 시간 · 19~23시 정각", "승인·공지된 전쟁만 열려요 (제24조)"]
+                 : ["평시 · 등록 거점은 보호돼요", "신규 유저는 첫 7일 보호 (제14조)"],
+    };
+  }
+  function paintLive() {
+    const el = $("#live"); if (!el) return;
+    const st = liveState();
+    el.dataset.war = st.war;
+    $("time", el).textContent = "한국 시간 " + st.time;
+    $(".live-benefits", el).innerHTML = st.items.map(t => `<span>${esc(t)}</span>`).join("");
+  }
   function homeView() {
-    const s = M.site, n = M.notices[0], cats = categories();
+    const s = M.site, n = M.notices[0], cats = categories().filter(c => c.home !== false);
     const firstTable = (() => { const m = M.md("WAR_RULES").match(/## 1\.[^\n]*\n+(\|[\s\S]*?)\n\n/); return m ? m[1] : ""; })();
     const sev = M.artByKey("60");
     const sevItems = sev ? [...sev.md.matchAll(/^- (.+)$/gm)].map(m => m[1]) : [];
     const ladder = (() => { const a = M.artByKey("59"); return a ? [...a.md.matchAll(/^\| (\d단계) \| (.+?) \|/gm)].map(m => [m[1], m[2]]) : []; })();
-    const [t1, t2] = s.tagline.split(/,\s*/);
-    const docCount = cats.reduce((a, c) => a + c.docs.length, 0);
+    const docCount = categories().reduce((a, c) => a + c.docs.length, 0);
+    const arrowUR = window.ICONS && window.ICONS["arrow-up-right"] ? window.icon("arrow-up-right") : ICON.arrow;
     return `
-    <section class="hero" id="hero" aria-labelledby="heroTitle">
-      <div class="wrap">
-        <div class="hero-grid">
-          <div>
-            <p class="eyebrow">${esc(s.hanja)} · ${esc(s.english)} 공식 위키</p>
-            <h1 id="heroTitle">${esc(t1)},${t2 ? `<br>${esc(t2)}` : ""}</h1>
-          </div>
-          <div class="hero-side">
-            <p>${esc(s.subtitle)}입니다. 처음이라면 시작하기 문서부터, 궁금한 규칙이 있다면 조 번호나 단어로 검색하세요.</p>
-            <div class="hero-ctas">
-              <a class="btn btn-primary" href="#cat-start">처음 오셨나요?</a>
-              <a class="btn btn-line" href="#rules">서버 규칙 보기</a>
-            </div>
+    <div class="wrap home">
+      <section class="opening" aria-labelledby="heroTitle">
+        <div>
+          <p class="eyebrow">${esc(s.hanja)} · ${esc(s.subtitle)}</p>
+          <h1 id="heroTitle">오늘은 월화에서 무엇을 해볼까요?</h1>
+        </div>
+        <div>
+          <p>${esc(s.tagline.replace(/\.$/, ""))}. 처음이라면 시작하기부터, 궁금한 규칙은 조 번호나 단어로 바로 찾아보세요.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="#cat-start">처음 시작하기</a>
+            <a class="btn btn-line" href="#war">전쟁 규칙 살펴보기</a>
           </div>
         </div>
-        <div class="home-search" role="search">
-          <label class="sr" for="homeSearch">위키 검색</label>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="homeSearch" type="search" placeholder="조 번호나 단어로 검색 (예: 33, 철수, W-7)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="homeAc" aria-expanded="false" enterkeyhint="search">
-          <kbd>/</kbd>
-          <div class="ac" id="homeAc" role="listbox" aria-label="검색 추천" hidden></div>
-        </div>
-        <figure class="banner">
-          <picture>
-            <source type="image/webp" srcset="img/hero-800.webp 800w, img/hero-1200.webp 1200w, img/hero-1672.webp 1672w" sizes="(min-width: 1240px) 1160px, 100vw">
-            <img id="kvImg" src="img/hero-1200.jpg" width="1672" height="941" fetchpriority="high" decoding="async" alt="월화 키 비주얼. 보름달과 벚꽃 아래 한옥, 월화 로고와 보랏빛 물약">
-          </picture>
-          <figcaption>${esc(s.hanja)} · 달과 꽃의 약탈 서버</figcaption>
-        </figure>
-        <div class="home-strip">
-          <div class="srv" data-srv aria-live="polite">
-            <span class="dot" aria-hidden="true"></span>
-            <b data-srv-state>서버 상태 확인 중</b>
-            <span class="srv-detail" data-srv-detail></span>
-            <button class="srv-copy" type="button" data-srv-copy hidden>주소 복사</button>
-          </div>
-          ${n ? `<a class="notice-line" href="#notice-1"><span class="tag">공지</span><time datetime="${esc(n.date)}">${esc(n.date)}</time><b>${esc(n.title)}</b>${ICON.chev}</a>` : ""}
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="home-sec wrap" aria-labelledby="catTitle">
-      <div class="cat-wrap">
-        <div class="cat-intro">
-          <h2 id="catTitle">하고 싶은 일로 <br>찾아보기</h2>
-          <p>카테고리 ${cats.length}개 · 문서 ${docCount}개</p>
+      <div class="home-search" role="search">
+        <label class="sr" for="homeSearch">위키 검색</label>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="homeSearch" type="search" placeholder="조 번호나 단어로 검색 (예: 33, 철수, W-7)" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="homeAc" aria-expanded="false" enterkeyhint="search">
+        <kbd>/</kbd>
+        <div class="ac" id="homeAc" role="listbox" aria-label="검색 추천" hidden></div>
+      </div>
+
+      <figure class="landscape">
+        <picture>
+          <source type="image/webp" srcset="img/hero-800.webp 800w, img/hero-1200.webp 1200w, img/hero-1672.webp 1672w" sizes="(min-width: 1240px) 1184px, 100vw">
+          <img src="img/hero-1200.jpg" width="1672" height="941" fetchpriority="high" decoding="async" alt="보름달과 벚꽃 아래 한옥 마을이 펼쳐진 월화 서버 풍경">
+        </picture>
+        <figcaption>달빛 아래 벚꽃이 흩날리는 월화</figcaption>
+      </figure>
+
+      <a class="live" id="live" href="#war" data-war="false" aria-label="지금의 월화, 전쟁 절차 보기">
+        <span class="live-label"><span class="live-dot" aria-hidden="true"></span><strong>지금의 월화</strong><time></time></span>
+        <span class="live-benefits"></span>
+        <span class="live-link">전쟁 절차 보기 ↗</span>
+      </a>
+      <div class="home-strip">
+        <div class="srv" data-srv aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <b data-srv-state>서버 상태 확인 중</b>
+          <span class="srv-detail" data-srv-detail></span>
+          <button class="srv-copy" type="button" data-srv-copy hidden>주소 복사</button>
         </div>
+        ${n ? `<a class="notice-line" href="#notice-1"><span class="tag">공지</span><time datetime="${esc(n.date)}">${esc(n.date)}</time><b>${esc(n.title)}</b>${ICON.chev}</a>` : ""}
+      </div>
+
+      <section class="home-sec" aria-labelledby="welcomeTitle">
+        <div class="sec-title"><h2 id="welcomeTitle">월화와 함께 시작하는 모험</h2><p>그림을 눌러 다음 안내로 이동하세요.</p></div>
+        <div class="comic-scroll" tabindex="0" role="region" aria-label="네 장면으로 보는 시작 안내 (가로로 넘길 수 있어요)">
+          <div class="comic-strip">
+            ${SCENES.map((c, i) => `<a class="scene sc-${i + 1}" href="${c.href}">
+              <span class="scene-art" role="img" aria-label="${esc(c.alt)}">
+                <img class="scene-bg" src="img/hero-800.webp" alt="" width="800" height="450" loading="lazy" decoding="async">
+                <span class="scene-hanja" aria-hidden="true">${c.hanja}</span>
+                <img class="scene-mascot" src="img/mascot.webp" alt="" width="900" height="900" loading="lazy" decoding="async">
+                <span class="petals" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="reaction" aria-hidden="true">${esc(c.say)}</span>
+              </span>
+              <span class="scene-cap">
+                <small><span class="step">STEP ${pad(i + 1)}</span><b aria-hidden="true">안내 열기</b></small>
+                <strong>${esc(c.title)}</strong>
+                <span class="desc">${esc(c.desc)}</span>
+                <span class="go" aria-hidden="true">${arrowUR}</span>
+              </span>
+            </a>`).join("")}
+          </div>
+        </div>
+        <p class="comic-swipe">옆으로 넘겨 다음 장면을 볼 수 있어요.</p>
+      </section>
+
+      <section class="directory" aria-labelledby="catTitle">
+        <div><h2 id="catTitle">하고 싶은 일로 찾아보기</h2><p>카테고리 ${categories().length}개 · 문서 ${docCount}개</p></div>
         <ul class="cat-list">
-          ${cats.map(c => `<li><a href="#cat-${esc(c.id)}" class="${c.docs.length ? "" : "empty"}">
-            <span class="cat-ico ico-${esc(c.id)}">${ICON[c.icon] || ICON.info}</span>
-            <span class="cat-txt"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span></span>
-            <span class="cat-count">${c.docs.length ? `문서 ${c.docs.length}` : "준비 중"}</span>
+          ${cats.map(c => `<li><a href="#cat-${esc(c.id)}">
+            <span class="cat-ico" aria-hidden="true">${iconOf(c.icon)}</span>
+            <span class="cat-txt"><b>${esc(c.name)}</b><span>${esc(c.desc)}</span><em>${c.docs.length ? `문서 ${c.docs.length}개` : "준비 중"}</em></span>
           </a></li>`).join("")}
+          <li><a href="#rules"><span class="cat-ico" aria-hidden="true">${iconOf("scroll")}</span><span class="cat-txt"><b>공식 규칙 전문</b><span>13장으로 정리한 월화 공식 규칙. 조 번호로 바로 이동할 수 있어요</span><em>${M.articles.length}개 조항</em></span></a></li>
+          <li><a href="#cat-economy"><span class="cat-ico" aria-hidden="true">${iconOf("coins")}</span><span class="cat-txt"><b>경제와 거래 · 명령어</b><span>유저 간 거래와 아이템 복구 정책. 명령어 모음은 준비 중이에요</span><em>문서 ${(catById("economy") || { docs: [] }).docs.length}개</em></span></a></li>
         </ul>
-      </div>
-    </section>
+      </section>
 
-    ${firstTable ? `<section class="home-sec wrap" aria-labelledby="lootTitle">
-      <div class="sec-head"><h2 id="lootTitle">무엇을 털 수 있나요</h2><a href="#war">전쟁·약탈 세부 ${ICON.chev}</a></div>
-      <div class="tw matrix-wrap" id="lootTable" tabindex="0" role="region" aria-label="약탈 가능 여부 표">${mdHtml(firstTable)}</div>
-    </section>` : ""}
+      ${firstTable ? `<section class="home-sec" aria-labelledby="lootTitle">
+        <div class="sec-head"><h2 id="lootTitle">무엇을 털 수 있나요</h2><a href="#war">전쟁·약탈 세부 ${ICON.chev}</a></div>
+        <div class="tw matrix-wrap" id="lootTable" tabindex="0" role="region" aria-label="약탈 가능 여부 표">${mdHtml(firstTable)}</div>
+      </section>` : ""}
 
-    <section class="home-sec wrap" aria-labelledby="warTitle">
-      <div class="sec-head"><h2 id="warTitle">전쟁은 이렇게 진행돼요</h2><a href="#ch-4">제4장 PvP 및 전쟁 규칙 ${ICON.chev}</a></div>
-      <ol class="timeline">${s.warTimeline.map(([t, h, p, k]) => `<li class="${esc(k)}"><span class="t">${esc(t)}</span><b>${esc(h)}</b><p>${esc(p)}</p></li>`).join("")}</ol>
-    </section>
+      <section class="home-sec" aria-labelledby="warTitle">
+        <div class="sec-head"><h2 id="warTitle">전쟁은 이렇게 진행돼요</h2><a href="#ch-4">제4장 PvP 및 전쟁 규칙 ${ICON.chev}</a></div>
+        <ol class="timeline">${s.warTimeline.map(([t, h, p, k]) => `<li class="${esc(k)}"><span class="t">${esc(t)}</span><b>${esc(h)}</b><p>${esc(p)}</p></li>`).join("")}</ol>
+      </section>
 
-    <section class="home-sec wrap" aria-labelledby="penTitle">
-      <div class="two">
-        <div>
-          <div class="sec-head"><h2 id="penTitle">즉시 영구 정지되는 행위</h2><a href="#rule-60">제60조 ${ICON.chev}</a></div>
-          <ul class="severe">${sevItems.map(t => `<li><span>${inl(t)}</span></li>`).join("")}</ul>
+      <section class="home-sec" aria-labelledby="penTitle">
+        <div class="two">
+          <div>
+            <div class="sec-head"><h2 id="penTitle">즉시 영구 정지되는 행위</h2><a href="#rule-60">제60조 ${ICON.chev}</a></div>
+            <ul class="severe">${sevItems.map(t => `<li><span>${inl(t)}</span></li>`).join("")}</ul>
+          </div>
+          <div>
+            <div class="sec-head"><h2>제재 7단계</h2><a href="#penalty">제재 기준표 ${ICON.chev}</a></div>
+            <div class="ladder" id="ladder">${ladder.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
+            <p class="note-sm">단순 의심만으로는 정지하지 않습니다. 운영진 2인 이상이 증거를 확인합니다 (제42조).</p>
+          </div>
         </div>
-        <div>
-          <div class="sec-head"><h2>제재 7단계</h2><a href="#penalty">제재 기준표 ${ICON.chev}</a></div>
-          <div class="ladder" id="ladder">${ladder.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
-          <p class="note-sm">단순 의심만으로는 정지하지 않습니다. 운영진 2인 이상이 증거를 확인합니다 (제42조).</p>
-        </div>
-      </div>
-    </section>`;
+      </section>
+    </div>`;
   }
   function afterHome() {
     $$("#lootTable td").forEach(td => {
@@ -306,6 +364,8 @@
     $$("#lootTable td:last-child, .severe li > span").forEach(td => enhance(td));
     $$("#ladder > div").forEach((d, i, all) => { d.style.height = (34 + i * (66 / Math.max(1, all.length - 1))) + "%"; });
     setupAutocomplete($("#homeSearch"), $("#homeAc"));
+    paintLive();
+    const t = setInterval(paintLive, 30000); cleanup.push(() => clearInterval(t));
   }
 
   /* ───────── 문서 레이아웃 ───────── */
@@ -329,7 +389,7 @@
               <div class="sub${chOpen ? " open" : ""}">${ch.articles.map(a => `<a href="#rule-${a.key}" data-art="${a.key}">${a.label} ${esc(a.title)}</a>`).join("")}</div></li>`;
           }).join("") : c.docs.length ? c.docs.map(d => `<li><a class="leaf${isCur(d.href) ? " active" : ""}" href="${esc(d.href)}">${esc(d.title)}</a></li>`).join("") : `<li class="leaf-empty">준비 중</li>`;
           return `<li class="grp${open || (c.id === "rules" && rulesOpen) ? " open" : ""}" data-cat="${esc(c.id)}">
-            <div class="grp-row"><a class="grp-link${r.page === "cat" && r.cat === c.id ? " active" : ""}" href="#cat-${esc(c.id)}"><span class="grp-ico">${ICON[c.icon] || ICON.info}</span>${esc(c.name)}</a>
+            <div class="grp-row"><a class="grp-link${r.page === "cat" && r.cat === c.id ? " active" : ""}" href="#cat-${esc(c.id)}"><span class="grp-ico">${iconOf(c.icon)}</span>${esc(c.name)}</a>
             <button class="grp-btn" type="button" aria-label="${esc(c.name)} 펼치기" aria-expanded="${open || (c.id === "rules" && rulesOpen)}">${ICON.down}</button></div>
             <ul class="grp-body">${body}</ul></li>`;
         }).join("")}
@@ -388,7 +448,7 @@
   function catPage(id) {
     const c = catById(id);
     const body = crumbs([[null, c.name]]) +
-      `<header class="page-head cat-head"><span class="cat-ico big ico-${esc(c.id)}">${ICON[c.icon] || ICON.info}</span><div><p class="eyebrow">카테고리</p><h1>${esc(c.name)}</h1><p class="desc">${esc(c.desc)}</p><p class="meta-line"><span>${c.docs.length ? `문서 ${c.docs.length}개` : "준비 중"}</span><span>최종 수정 ${esc(M.site.revisedAt)}</span></p></div></header>` +
+      `<header class="page-head cat-head"><span class="cat-ico big ico-${esc(c.id)}">${iconOf(c.icon)}</span><div><p class="eyebrow">카테고리</p><h1>${esc(c.name)}</h1><p class="desc">${esc(c.desc)}</p><p class="meta-line"><span>${c.docs.length ? `문서 ${c.docs.length}개` : "준비 중"}</span><span>최종 수정 ${esc(M.site.revisedAt)}</span></p></div></header>` +
       (c.docs.length ? `<ol class="doc-list">${c.docs.map((d, i) => `<li><a href="${esc(d.href)}"><span class="no">${pad(i + 1)}</span><span class="doc-txt"><b>${esc(d.title)}</b>${d.desc ? `<span>${esc(d.desc)}</span>` : ""}</span>${ICON.arrow}</a></li>`).join("")}</ol>`
         : `<blockquote class="callout callout-note"><span class="callout-label">준비 중</span><p>이 카테고리의 문서는 아직 없습니다. 운영진이 실제 서버 정보를 확인한 뒤 추가할 예정입니다. 그동안은 <a href="#faq">자주 묻는 질문</a>이나 <a href="#report">신고·문의 안내</a>를 이용해 주세요.</p></blockquote>`) +
       `<section class="related" aria-labelledby="relTitle"><h2 id="relTitle">다른 카테고리</h2><ul>${categories().filter(x => x.id !== id).slice(0, 6).map(x => `<li><a href="#cat-${esc(x.id)}"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span></a></li>`).join("")}</ul></section>`;
@@ -401,7 +461,7 @@
     const a = c.articles;
     const desc = a.length ? `${a[0].label} ~ ${a[a.length - 1].label} · ${a.length}개 조항` : "";
     const tools = `<button class="btn-sm" type="button" data-expand="1">세부 모두 펼치기</button><button class="btn-sm" type="button" data-expand="0">모두 접기</button>${copyMdBtn("RULES")}`;
-    let body = crumbs([["#cat-rules", "서버 규칙"], [null, `제${c.no}장`]]) + head(`서버 규칙 · 제${c.no}장`, esc(c.title), desc, tools, M.updated("RULES")) + "<!--TOC-->";
+    let body = crumbs([["#cat-rules", "공식 규칙"], [null, `제${c.no}장`]]) + head(`공식 규칙 · 제${c.no}장`, esc(c.title), desc, tools, M.updated("RULES")) + "<!--TOC-->";
     if (c.no === 1 && M.rules.preamble) body += `<details class="fold"><summary>문서 정보와 표기 안내 ${ICON.chev}</summary><div class="fold-body prose" data-md="preamble"></div></details>`;
     if (c.note) body += `<div class="chapter-note prose" data-md="note"></div>`;
     body += a.map(art => {
@@ -434,7 +494,7 @@
   function mdPage(page) {
     const [title, key] = PAGE_META[page];
     const descs = { war: "전쟁 진행 순서, 신청 양식, 전쟁 구역 계산, 운영진 체크리스트.", penalty: "위반별 1차·2차·3차 제재와 영구 정지 조건. 코드를 누르면 해당 조항과 함께 볼 수 있어요.", changelog: "모든 규칙 변경과 제정 전 검수 기록.", report: "신고 접수처와 기한, 양식, 증거 준비, 처리 순서, 이의제기." };
-    const parent = { war: ["#cat-war", "전쟁과 약탈"], penalty: ["#cat-penalty", "제재와 판정"], changelog: ["#cat-guide", "이용 안내"], report: ["#cat-guide", "이용 안내"] }[page];
+    const parent = { war: ["#cat-war", "전쟁"], penalty: ["#cat-penalty", "제재와 판정"], changelog: ["#cat-help", "이용 안내"], report: ["#cat-help", "이용 안내"] }[page];
     const body = crumbs([parent || [null, ""], [null, title]].filter(x => x[1])) + head(parent ? parent[1] : "문서", esc(title), descs[page] || "", copyMdBtn(key), M.updated(key)) + "<!--TOC-->" + `<div class="prose doc-body" data-md-doc="${key}"></div>` + docFooter(["#" + page]);
     const secs = page === "war" ? M.war : page === "changelog" ? M.changelog : page === "report" ? M.report : sectionsOf(M.md(key));
     const toc = secs.map((s, i) => ({ id: `${page}-s${i}`, label: s.title, l3: s.level === 3 }));
@@ -465,7 +525,7 @@
   }
 
   function noticePage() {
-    const body = crumbs([["#cat-guide", "이용 안내"], [null, "공지"]]) + head("이용 안내", "공지", "운영 공지와 규칙 시행 안내.", copyMdBtn("NOTICE"), M.updated("NOTICE")) + "<!--TOC-->" +
+    const body = crumbs([["#cat-help", "이용 안내"], [null, "공지"]]) + head("이용 안내", "공지", "운영 공지와 규칙 시행 안내.", copyMdBtn("NOTICE"), M.updated("NOTICE")) + "<!--TOC-->" +
       (M.notices.length ? M.notices.map((n, i) => `<article class="art" id="notice-${i + 1}" aria-labelledby="nt-${i}"><div class="art-head"><time class="art-no" datetime="${esc(n.date)}">${esc(n.date)}</time><h2 id="nt-${i}">${esc(n.title)}</h2><div class="art-tools"><button class="mini" type="button" data-link="notice-${i + 1}">${ICON.link}<span class="lbl">링크</span></button></div></div><div class="art-body"><div class="prose" data-md-notice="${i}"></div></div></article>`).join("") : `<p class="empty-note">등록된 공지가 없습니다.</p>`) + docFooter(["#notice"]);
     return { body, toc: M.notices.map((n, i) => ({ id: "notice-" + (i + 1), label: n.date + " " + n.title })) };
   }
@@ -772,7 +832,7 @@
 
   /* ───────── 전체 메뉴(서랍) ───────── */
   function drawerHtml() {
-    return `<a class="d-home" href="#home">${ICON.chev}홈</a>` + categories().map(c => `<section class="d-grp"><a class="d-cat" href="#cat-${esc(c.id)}"><span class="grp-ico">${ICON[c.icon] || ICON.info}</span>${esc(c.name)}<span class="d-n">${c.docs.length || "준비 중"}</span></a>${c.docs.length ? `<ul>${c.docs.map(d => `<li><a href="${esc(d.href)}">${esc(d.title)}</a></li>`).join("")}</ul>` : ""}</section>`).join("") +
+    return `<a class="d-home" href="#home">${ICON.chev}홈</a>` + categories().map(c => `<section class="d-grp"><a class="d-cat" href="#cat-${esc(c.id)}"><span class="grp-ico">${iconOf(c.icon)}</span>${esc(c.name)}<span class="d-n">${c.docs.length || "준비 중"}</span></a>${c.docs.length ? `<ul>${c.docs.map(d => `<li><a href="${esc(d.href)}">${esc(d.title)}</a></li>`).join("")}</ul>` : ""}</section>`).join("") +
       (document.body.classList.contains("is-admin") ? `<section class="d-grp"><a class="d-cat" href="#admin"><span class="grp-ico">${ICON.shield}</span>규칙 편집</a></section>` : "");
   }
   function openDrawer() {
@@ -798,14 +858,12 @@
 
   /* ───────── 테마 ───────── */
   const root = document.documentElement;
-  const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = () => root.dataset.theme !== "light"; // 기본은 다크 (js/theme.js가 저장된 선택을 먼저 적용)
   const paintTheme = () => { const d = isDark(); $("#themeBtn").setAttribute("aria-label", d ? "라이트 모드로 바꾸기" : "다크 모드로 바꾸기"); $(".theme-label").textContent = d ? "라이트" : "다크"; };
-  try { const t = localStorage.getItem("wolhwa-theme"); if (t) root.dataset.theme = t; } catch {}
   paintTheme();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintTheme);
   $("#themeBtn").addEventListener("click", () => {
     const next = isDark() ? "light" : "dark";
-    root.classList.add("theming"); root.dataset.theme = next; setTimeout(() => root.classList.remove("theming"), 320);
+    root.classList.add("theming"); root.dataset.theme = next; const tc = $('meta[name="theme-color"]'); if (tc) tc.content = next === "dark" ? "#13101a" : "#f7f2f3"; setTimeout(() => root.classList.remove("theming"), 320);
     try { localStorage.setItem("wolhwa-theme", next); } catch {}
     paintTheme(); toast(next === "dark" ? "다크 모드" : "라이트 모드");
   });

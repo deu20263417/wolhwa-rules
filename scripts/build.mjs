@@ -33,7 +33,7 @@ console.log("수정일:", Object.entries(meta.files).map(([k, v]) => `${k} ${v}`
 const out = join(root, "_site");
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
-for (const p of ["index.html", "robots.txt", "_headers", ".nojekyll", "css", "js", "data", "img", "fonts", "vendor"]) {
+for (const p of ["index.html", "page.html", "404.html", "sitemap.xml", "robots.txt", "_headers", ".nojekyll", "css", "js", "data", "img", "fonts", "vendor"]) {
   if (existsSync(join(root, p))) cpSync(join(root, p), join(out, p), { recursive: true });
 }
 console.log("빌드 완료 → _site");
